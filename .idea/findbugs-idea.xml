@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="FindBugs-IDEA">
+    <analysisEffort>max</analysisEffort>
+    <minRank>8</minRank>
+    <minPriority>Low</minPriority>
+    <detectors>
+      <detector name="InefficientIndexOf" enabled="true" />
+      <detector name="InefficientInitializationInsideLoop" enabled="true" />
+    </detectors>
+  </component>
+</project>
