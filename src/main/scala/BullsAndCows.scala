@@ -1,81 +1,88 @@
-import java.util.Scanner
-
-import scala.util.Random
+import scala.annotation.tailrec
+import scala.io.StdIn
+import scala.util.{Failure, Random, Success, Try}
 
 case class BullsAndCowsScore(bulls: Int, cows: Int)
 
-class BullsAndCows(seed: Long, scanner: Scanner) {
+class BullsAndCows {
 
-  def playGame(randomUniqueNumbers: Seq[Int]): Int = {
-    var guesses = 0
-    var guess = Seq.empty[Int]
-    do {
-      val inputNumbers = readA4DigitNumber
-      if (inputNumbers.nonEmpty) {
-        guesses += 1
-        guess = convertNumberToIntCollection(inputNumbers.get)
+  def playGame(input: () => String, randomUniqueNumbers: Seq[Int]): Int = {
+    @tailrec
+    def play(guesses: Int): Int = readA4DigitNumber(input) match {
+      case Some(x) =>
+        val guess = convertNumberToIntCollection(x)
+
         val score = computeScore(randomUniqueNumbers, guess)
         if (score.bulls != 4) Console.println(score.cows + " Cows and " + score.bulls + " Bulls.")
-      }
-    } while (!guess.equals(randomUniqueNumbers))
-    guesses
+
+        if (guess.equals(randomUniqueNumbers)) guesses + 1
+        else play(guesses + 1)
+      case None => play(guesses)
+    }
+
+    play(0)
   }
 
-  val rnd = new Random(seed)
+  def readA4DigitNumber(io: () => String): Option[Int] = {
+
+    val intputString = io.apply()
+
+    val input = Try(intputString.toInt)
+
+    def hasDuplicateDigits(num: Int) = {
+      val intCollection = convertNumberToIntCollection(num)
+      intCollection.distinct.size != intCollection.size
+    }
+
+    input match {
+      case Success(myInt: Int) => {
+        if (myInt < 1000 || myInt > 9999 || hasDuplicateDigits(myInt)) {
+          printError()
+          None
+        } else {
+          Some(myInt)
+        }
+      }
+      case Failure(e: Throwable) => None
+    }
+  }
 
   def convertNumberToIntCollection(num: Int): Seq[Int] = {
     num.toString.map(_.asDigit)
   }
 
-  def hasDuplicateDigits(num: Int) = {
-    val intCollection = convertNumberToIntCollection(num)
-    intCollection.distinct.size != intCollection.size
+  def computeScore(randomUniqueNumbers: Seq[Int], guess: Seq[Int]): BullsAndCowsScore = {
+    val bulls = guess.zip(randomUniqueNumbers)
+      .count(ga => ga._1 == ga._2)
+
+    val cows = guess.count(g => randomUniqueNumbers.contains(g)) - bulls
+
+    BullsAndCowsScore(bulls, cows)
   }
 
-  def printError() {
-    Console.print("Enter a 4-digit number with no duplicate digits, your input was not " + "acceptable")
-  }
-
-  def readA4DigitNumber = {
-    var input: Option[Int] = Option.empty
-    Console.print("Guess a 4-digit number with no duplicate digits: ")
-    try {
-      val num = scanner.nextInt
-      if (num < 1000 || num > 9999 || hasDuplicateDigits(num)) {
-        printError()
-      }
-      else {
-        input = Some(num)
-      }
-    }
-    catch {
-      case _: NoSuchElementException =>
-        printError()
-        if (scanner.hasNext) scanner.next
-    }
-    input
-  }
-
-  def get4RandomUniqueNumbers() = {
-    rnd.shuffle(1 to 9).slice(0, 4)
-  }
-
-  def computeScore(randomUniqueNumbers: Seq[Int], guess: Seq[Int]) = {
-    var score = BullsAndCowsScore(0, 0)
-    for (i <- 0 to 3)
-      if (guess(i).equals(randomUniqueNumbers(i)))
-        score = BullsAndCowsScore(score.bulls + 1, score.cows)
-      else if (randomUniqueNumbers.contains(guess(i)))
-        score = BullsAndCowsScore(score.bulls, score.cows + 1)
-    score
-  }
+  private def printError() = Console.print("Enter a 4-digit number with no duplicate digits, your input was not " +
+    "acceptable")
 }
 
-object BullsAndCows {
+object Game {
   def main(args: Array[String]) {
-    val app = new BullsAndCows(System.currentTimeMillis(), new Scanner(System.in))
-    val guesses = app.playGame(app.get4RandomUniqueNumbers())
+
+    val app = new BullsAndCows()
+
+    val goal = get4RandomUniqueNumbers(System.currentTimeMillis())
+
+    val guesses = app.playGame(TakeInput.nextString, goal)
+
     Console.println("You won after " + guesses + " guesses!")
   }
+
+  def get4RandomUniqueNumbers(seed: Long): Seq[Int] =
+    new Random(seed)
+      .shuffle(1 to 9)
+      .slice(0, 4)
+}
+
+object TakeInput {
+  val nextString: () => String = () => StdIn.readLine()
 }
 
